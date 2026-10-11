@@ -1,0 +1,46 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bluebird",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Frontend (Vite build) served as static assets; /api/* goes to the Worker.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "d1_databases": [
+    { "binding": "DB", "database_name": "bluebird", "database_id": "<your-d1-database-id>", "migrations_dir": "db/migrations" }
+  ],
+  "r2_buckets": [{ "binding": "SNAPSHOTS", "bucket_name": "bluebird-snapshots" }],
+
+  // Optional: Cloudflare Email Sending. Uncomment once your domain is onboarded
+  // (Dashboard > Email > Email Sending) and set EMAIL_FROM to an address on it.
+  // Without it, set the RESEND_API_KEY secret instead, or read sign-in links in the Worker log.
+  // "send_email": [{ "name": "EMAIL" }],
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "CRAWLER", "class_name": "Crawler" },
+      { "name": "CHAT", "class_name": "ChatRoom" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Crawler", "ChatRoom"] }],
+
+  // Hourly tick: daily price-logging basket at 04:00 UTC, auto-lock, deal scans.
+  "triggers": { "crons": ["7 * * * *"] },
+
+  "vars": {
+    "APP_URL": "https://bluebird.<your-subdomain>.workers.dev",
+    "ADMIN_EMAILS": "you@example.com",          // comma-separated; these people get the admin view
+    "ADMIN_NAME": "Sam",                        // shown to members: "Ask Sam for the link"
+    "EMAIL_FROM": "bluebird@yourdomain.com",    // must be on a domain you've verified for sending
+    "LOGGING_AIRPORTS": "LGW,MAN,LHR"
+  }
+  // Secrets (wrangler secret put): OPS_TOKEN, GEMINI_API_KEY, optionally RESEND_API_KEY.
+}
